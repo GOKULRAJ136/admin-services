@@ -146,7 +146,7 @@
 		<dependency>
 			<groupId>io.mosip.commons</groupId>
 			<artifactId>commons-packet-manager</artifactId>
-			<version>${kernel.version}</version>
+			<version>1.3.0-beta.1</version>
 			<exclusions>
 				<exclusion>
 					<groupId>org.springframework.cloud</groupId>
