@@ -1,15 +1,14 @@
 package io.mosip.admin.bulkdataupload.repositories;
 
-import java.time.LocalDateTime;
-import java.util.List;
-
+import io.mosip.admin.bulkdataupload.entity.DocumentCategory;
+import io.mosip.admin.bulkdataupload.entity.id.CodeAndLanguageCodeID;
+import io.mosip.kernel.core.dataaccess.spi.repository.BaseRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
-import io.mosip.kernel.core.dataaccess.spi.repository.BaseRepository;
-import io.mosip.admin.bulkdataupload.entity.DocumentCategory;
-import io.mosip.admin.bulkdataupload.entity.id.CodeAndLanguageCodeID;
+import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * @author Neha
@@ -63,4 +62,7 @@ public interface DocumentCategoryRepository extends BaseRepository<DocumentCateg
 	
 	@Query("FROM DocumentCategory WHERE code =?1 AND langCode =?2 AND (isDeleted is null OR isDeleted = false)")
 	DocumentCategory findByCodeAndLangCode(String code, String langCode);
+
+	@Query(value = "select dt.code from master.doc_category dt where (dt.is_deleted = false or dt.is_deleted is null) AND dt.is_active = true", nativeQuery = true)
+	List<String> findAllByIsDeletedFalseOrIsDeletedIsNull();
 }
