@@ -29,5 +29,4 @@ public class DocTypeCodeValidator implements ConstraintValidator<DocTypeCode, St
         return false;
     }
 
-
 }

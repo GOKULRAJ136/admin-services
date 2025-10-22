@@ -29,5 +29,4 @@ public class DocCatCodeValidator implements ConstraintValidator<DocCatCode, Stri
         return false;
     }
 
-
 }
