@@ -13,10 +13,7 @@ GetDocumentTypeByLangCode:
 }'
       output: '{
 "documenttypes": [{
-       "code": "$IGNORE$",
-        "name": "$IGNORE$",
-        "description": "$IGNORE$",
-        "isActive": "$IGNORE$"
+        "isActive": "true"
     }]
 }'
 
@@ -34,8 +31,8 @@ GetDocumentTypeByLangCode:
       output: '{
    "errors": [
     {
-      "errorCode": "KER-MSD-118",
-      "message": "Document Type not found"
+      "errorCode": "KER-MSD-023",
+      "message": "Invalid language code"
     }
   ]
 }'

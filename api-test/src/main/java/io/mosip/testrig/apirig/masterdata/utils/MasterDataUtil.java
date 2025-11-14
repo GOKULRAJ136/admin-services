@@ -2,7 +2,9 @@ package io.mosip.testrig.apirig.masterdata.utils;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import javax.ws.rs.core.MediaType;
 
@@ -16,6 +18,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import io.mosip.testrig.apirig.dto.TestCaseDTO;
+import io.mosip.testrig.apirig.masterdata.testrunner.MosipTestRunner;
 import io.mosip.testrig.apirig.utils.AdminTestUtil;
 import io.mosip.testrig.apirig.utils.ConfigManager;
 import io.mosip.testrig.apirig.utils.GlobalConstants;
@@ -29,6 +32,8 @@ public class MasterDataUtil extends AdminTestUtil {
 	public static DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy/MM/dd");
 	public static String infantDob = LocalDateTime.now().minusYears(getInfantMaxAge()).format(dateFormatter);
 	
+	public static List<String> testCasesInRunScope = new ArrayList<>();
+	
 	public static void setLogLevel() {
 		if (MasterDataConfigManager.IsDebugEnabled())
 			logger.setLevel(Level.ALL);
@@ -38,9 +43,28 @@ public class MasterDataUtil extends AdminTestUtil {
 
 	public static String isTestCaseValidForExecution(TestCaseDTO testCaseDTO) {
 		String testCaseName = testCaseDTO.getTestCaseName();
+		currentTestCaseName = testCaseName;
+		
+		int indexof = testCaseName.indexOf("_");
+		String modifiedTestCaseName = testCaseName.substring(indexof + 1);
+
+		addTestCaseDetailsToMap(modifiedTestCaseName, testCaseDTO.getUniqueIdentifier());
+		
+		if (!testCasesInRunScope.isEmpty()
+				&& testCasesInRunScope.contains(testCaseDTO.getUniqueIdentifier()) == false) {
+			throw new SkipException(GlobalConstants.NOT_IN_RUN_SCOPE_MESSAGE);
+		}
 
 		if (SkipTestCaseHandler.isTestCaseInSkippedList(testCaseName)) {
 			throw new SkipException(GlobalConstants.KNOWN_ISSUES);
+		}
+		
+		if ((testCaseName.contains("_GetBiometricTypesByLangcode_")
+				|| testCaseName.contains("_GetBiometricTypeByCodeAndLangcode_")
+				|| testCaseName.contains("_GetExceptionalHolidays_") || testCaseName.contains("_GetModuleByLangCode_")
+				|| testCaseName.contains("_GetModuleByIdLangCode_"))
+				&& languageList.get(0) != MosipTestRunner.localLanguageList.get(0)) {
+			throw new SkipException(MasterDataConstants.NOT_SUPPORT_FOR_OPTIONAL_LANGUAGE);
 		}
 		return testCaseName;
 	}
