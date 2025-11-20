@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import  jakarta.persistence.Column;
@@ -33,7 +34,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import io.mosip.kernel.core.dataaccess.exception.DataAccessLayerException;
-import io.mosip.kernel.core.util.DateUtils;
+import io.mosip.kernel.core.util.DateUtils2;
 import io.mosip.kernel.dataaccess.hibernate.constant.HibernateErrorCode;
 import io.mosip.kernel.masterdata.constant.MasterdataSearchErrorCode;
 import io.mosip.kernel.masterdata.constant.OrderEnum;
@@ -113,7 +114,7 @@ public class MasterdataSearchHelper {
 		Root<E> rootSelectQuery = selectQuery.from(entity);
 		Root<E> rootCountQuery = countQuery.from(entity);
 		// count query
-		countQuery.select(countCriteriaBuilder.count(countQuery.from(entity)));
+		countQuery.select(countCriteriaBuilder.count(rootCountQuery));
 		// applying filters
 		filterQuery(selectCriteriaBuilder, countCriteriaBuilder, rootSelectQuery, rootCountQuery, selectQuery, countQuery, searchDto.getFilters(),
 				searchDto.getLanguageCode(), optionalFilters);
@@ -127,7 +128,7 @@ public class MasterdataSearchHelper {
 			// creating executable query from count criteria query
 			TypedQuery<Long> countExecutableQuery = entityManager.createQuery(countQuery);
 			// getting the rows count
-			rows = countExecutableQuery.getSingleResult();
+			rows = Optional.ofNullable(countExecutableQuery.getSingleResult()).orElse(0L);
 			// adding pagination
 			paginationQuery(executableQuery, searchDto.getPagination());
 			// executing query and returning data
@@ -170,7 +171,7 @@ public class MasterdataSearchHelper {
 		Root<E> selectRootQuery = selectQuery.from(entity);
 		Root<E> countRootQuery = countQuery.from(entity);
 		// count query
-		countQuery.select(countQueryCriteriaBuilder.count(countQuery.from(entity)));
+		countQuery.select(countQueryCriteriaBuilder.count(countRootQuery));
 		// applying filters
 		filterQueryWithoutLang(selectQueryCriteriaBuilder, countQueryCriteriaBuilder, selectRootQuery, countRootQuery, selectQuery, countQuery, searchDto.getFilters(),
 				optionalFilters);
@@ -184,7 +185,7 @@ public class MasterdataSearchHelper {
 			// creating executable query from count criteria query
 			TypedQuery<Long> countExecutableQuery = entityManager.createQuery(countQuery);
 			// getting the rows count
-			rows = countExecutableQuery.getSingleResult();
+			rows = Optional.ofNullable(countExecutableQuery.getSingleResult()).orElse(0L);
 			// adding pagination
 			paginationQuery(executableQuery, searchDto.getPagination());
 			// executing query and returning data
@@ -449,8 +450,8 @@ public class MasterdataSearchHelper {
 			String toValue = filter.getToValue();
 			String fromValue = filter.getFromValue();
 			if (LocalDateTime.class.getName().equals(fieldType)) {
-				return builder.between(root.get(columnName), DateUtils.parseToLocalDateTime(fromValue),
-						DateUtils.convertUTCToLocalDateTime(toValue));
+				return builder.between(root.get(columnName), DateUtils2.parseToLocalDateTime(fromValue),
+						DateUtils2.convertUTCToLocalDateTime(toValue));
 			}
 			if (LocalDate.class.getName().equals(fieldType)) {
 				return builder.between(root.get(columnName), LocalDate.parse(fromValue), LocalDate.parse(toValue));
@@ -493,7 +494,7 @@ public class MasterdataSearchHelper {
 			Class<? extends Object> type = path.getJavaType();
 			String fieldType = type.getTypeName();
 			if (LocalDateTime.class.getName().equals(fieldType)) {
-				return DateUtils.parseToLocalDateTime(value);
+				return DateUtils2.parseToLocalDateTime(value);
 			}
 			if (LocalDate.class.getName().equals(fieldType)) {
 				return LocalDate.parse(value);
@@ -536,7 +537,7 @@ public class MasterdataSearchHelper {
 			Class<? extends Object> type = path.getJavaType();
 			String fieldType = type.getTypeName();
 			if (LocalDateTime.class.getName().equals(fieldType)) {
-				LocalDateTime start = DateUtils.parseToLocalDateTime(value);
+				LocalDateTime start = DateUtils2.parseToLocalDateTime(value);
 				predicate = builder.between(root.get(column), start, start.plusNanos(1000000l));
 			} else if (String.class.getName().equals(fieldType)) {
 				if (value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false"))

@@ -1,4 +1,4 @@
-package io.mosip.testrig.apirig.testscripts;
+package io.mosip.testrig.apirig.masterdata.testscripts;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -22,19 +22,19 @@ import org.testng.internal.TestResult;
 
 import io.mosip.testrig.apirig.dto.OutputValidationDto;
 import io.mosip.testrig.apirig.dto.TestCaseDTO;
+import io.mosip.testrig.apirig.masterdata.utils.MasterDataConfigManager;
+import io.mosip.testrig.apirig.masterdata.utils.MasterDataUtil;
 import io.mosip.testrig.apirig.testrunner.HealthChecker;
 import io.mosip.testrig.apirig.utils.AdminTestException;
 import io.mosip.testrig.apirig.utils.AdminTestUtil;
 import io.mosip.testrig.apirig.utils.AuthenticationTestException;
 import io.mosip.testrig.apirig.utils.GlobalConstants;
-import io.mosip.testrig.apirig.utils.MasterDataConfigManager;
-import io.mosip.testrig.apirig.utils.MasterDataUtil;
 import io.mosip.testrig.apirig.utils.OutputValidationUtil;
 import io.mosip.testrig.apirig.utils.ReportUtil;
 import io.restassured.response.Response;
 
-public class SimpleDelete extends AdminTestUtil implements ITest {
-	private static final Logger logger = Logger.getLogger(SimpleDelete.class);
+public class PatchWithQueryParam extends MasterDataUtil implements ITest {
+	private static final Logger logger = Logger.getLogger(PatchWithQueryParam.class);
 	protected String testCaseName = "";
 	public Response response = null;
 
@@ -46,11 +46,19 @@ public class SimpleDelete extends AdminTestUtil implements ITest {
 			logger.setLevel(Level.ERROR);
 	}
 
+	/**
+	 * get current testcaseName
+	 */
 	@Override
 	public String getTestName() {
 		return testCaseName;
 	}
 
+	/**
+	 * Data provider class provides test case list
+	 * 
+	 * @return object of data provider
+	 */
 	@DataProvider(name = "testcaselist")
 	public Object[] getTestCaseList(ITestContext context) {
 		String ymlFile = context.getCurrentXmlTest().getLocalParameters().get("ymlFile");
@@ -58,24 +66,33 @@ public class SimpleDelete extends AdminTestUtil implements ITest {
 		return getYmlTestData(ymlFile);
 	}
 
+	/**
+	 * Test method for OTP Generation execution
+	 * 
+	 * @param objTestParameters
+	 * @param testScenario
+	 * @param testcaseName
+	 * @throws AuthenticationTestException
+	 * @throws AdminTestException
+	 */
 	@Test(dataProvider = "testcaselist")
 	public void test(TestCaseDTO testCaseDTO) throws AuthenticationTestException, AdminTestException {
 		testCaseName = testCaseDTO.getTestCaseName();
 		testCaseName = MasterDataUtil.isTestCaseValidForExecution(testCaseDTO);
-		String[] templateFields = testCaseDTO.getTemplateFields();
 		if (HealthChecker.signalTerminateExecution) {
 			throw new SkipException(
 					GlobalConstants.TARGET_ENV_HEALTH_CHECK_FAILED + HealthChecker.healthCheckFailureMapS);
 		}
 
-		String inputJson = getJsonFromTemplate(testCaseDTO.getInput(), testCaseDTO.getInputTemplate());
 		
+		String[] templateFields = testCaseDTO.getTemplateFields();
 
 		if (testCaseDTO.getTemplateFields() != null && templateFields.length > 0) {
 			ArrayList<JSONObject> inputtestCases = AdminTestUtil.getInputTestCase(testCaseDTO);
 			ArrayList<JSONObject> outputtestcase = AdminTestUtil.getOutputTestCase(testCaseDTO);
+
 			for (int i = 0; i < languageList.size(); i++) {
-				response = deleteWithBodyAndCookie(ApplnURI + testCaseDTO.getEndPoint(),
+				response = patchWithQueryParamAndCookie(ApplnURI + testCaseDTO.getEndPoint(),
 						getJsonFromTemplate(inputtestCases.get(i).toString(), testCaseDTO.getInputTemplate()),
 						COOKIENAME, testCaseDTO.getRole(), testCaseDTO.getTestCaseName());
 
@@ -91,25 +108,25 @@ public class SimpleDelete extends AdminTestUtil implements ITest {
 		}
 
 		else {
-			
-				response = deleteWithBodyAndCookie(ApplnURI + testCaseDTO.getEndPoint(), inputJson, COOKIENAME,
-						testCaseDTO.getRole(), testCaseDTO.getTestCaseName());
-			}
-			Map<String, List<OutputValidationDto>> ouputValid = null;
-			
-				ouputValid = OutputValidationUtil.doJsonOutputValidation(response.asString(),
-						getJsonFromTemplate(testCaseDTO.getOutput(), testCaseDTO.getOutputTemplate()), testCaseDTO,
-						response.getStatusCode());
-			
+			response = patchWithQueryParamAndCookie(ApplnURI + testCaseDTO.getEndPoint(),
+					getJsonFromTemplate(testCaseDTO.getInput(), testCaseDTO.getInputTemplate()), COOKIENAME,
+					testCaseDTO.getRole(), testCaseDTO.getTestCaseName());
 
+			Map<String, List<OutputValidationDto>> ouputValid = OutputValidationUtil.doJsonOutputValidation(
+					response.asString(), getJsonFromTemplate(testCaseDTO.getOutput(), testCaseDTO.getOutputTemplate()),
+					testCaseDTO, response.getStatusCode());
 			Reporter.log(ReportUtil.getOutputValidationReport(ouputValid));
 
 			if (!OutputValidationUtil.publishOutputResult(ouputValid))
 				throw new AdminTestException("Failed at output validation");
 		}
+	}
 
-	
-
+	/**
+	 * The method ser current test name to result
+	 * 
+	 * @param result
+	 */
 	@AfterMethod(alwaysRun = true)
 	public void setResultTestName(ITestResult result) {
 		try {

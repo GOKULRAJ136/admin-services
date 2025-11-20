@@ -1,4 +1,4 @@
-package io.mosip.testrig.apirig.testscripts;
+package io.mosip.testrig.apirig.masterdata.testscripts;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -22,22 +22,21 @@ import org.testng.internal.TestResult;
 
 import io.mosip.testrig.apirig.dto.OutputValidationDto;
 import io.mosip.testrig.apirig.dto.TestCaseDTO;
+import io.mosip.testrig.apirig.masterdata.utils.MasterDataConfigManager;
+import io.mosip.testrig.apirig.masterdata.utils.MasterDataUtil;
 import io.mosip.testrig.apirig.testrunner.HealthChecker;
 import io.mosip.testrig.apirig.utils.AdminTestException;
 import io.mosip.testrig.apirig.utils.AdminTestUtil;
 import io.mosip.testrig.apirig.utils.AuthenticationTestException;
 import io.mosip.testrig.apirig.utils.GlobalConstants;
-import io.mosip.testrig.apirig.utils.MasterDataConfigManager;
-import io.mosip.testrig.apirig.utils.MasterDataUtil;
 import io.mosip.testrig.apirig.utils.OutputValidationUtil;
 import io.mosip.testrig.apirig.utils.ReportUtil;
 import io.restassured.response.Response;
 
-public class SimplePost extends AdminTestUtil implements ITest {
-	private static final Logger logger = Logger.getLogger(SimplePost.class);
+public class SimpleDelete extends MasterDataUtil implements ITest {
+	private static final Logger logger = Logger.getLogger(SimpleDelete.class);
 	protected String testCaseName = "";
 	public Response response = null;
-	public boolean auditLogCheck = false;
 
 	@BeforeClass
 	public static void setLogLevel() {
@@ -47,19 +46,11 @@ public class SimplePost extends AdminTestUtil implements ITest {
 			logger.setLevel(Level.ERROR);
 	}
 
-	/**
-	 * get current testcaseName
-	 */
 	@Override
 	public String getTestName() {
 		return testCaseName;
 	}
 
-	/**
-	 * Data provider class provides test case list
-	 * 
-	 * @return object of data provider
-	 */
 	@DataProvider(name = "testcaselist")
 	public Object[] getTestCaseList(ITestContext context) {
 		String ymlFile = context.getCurrentXmlTest().getLocalParameters().get("ymlFile");
@@ -67,21 +58,10 @@ public class SimplePost extends AdminTestUtil implements ITest {
 		return getYmlTestData(ymlFile);
 	}
 
-	/**
-	 * Test method for OTP Generation execution
-	 * 
-	 * @param objTestParameters
-	 * @param testScenario
-	 * @param testcaseName
-	 * @throws AuthenticationTestException
-	 * @throws AdminTestException
-	 */
 	@Test(dataProvider = "testcaselist")
 	public void test(TestCaseDTO testCaseDTO) throws AuthenticationTestException, AdminTestException {
 		testCaseName = testCaseDTO.getTestCaseName();
 		testCaseName = MasterDataUtil.isTestCaseValidForExecution(testCaseDTO);
-		testCaseName = isTestCaseValidForExecution(testCaseDTO);
-		auditLogCheck = testCaseDTO.isAuditLogCheck();
 		String[] templateFields = testCaseDTO.getTemplateFields();
 		if (HealthChecker.signalTerminateExecution) {
 			throw new SkipException(
@@ -89,12 +69,13 @@ public class SimplePost extends AdminTestUtil implements ITest {
 		}
 
 		String inputJson = getJsonFromTemplate(testCaseDTO.getInput(), testCaseDTO.getInputTemplate());
+		
 
 		if (testCaseDTO.getTemplateFields() != null && templateFields.length > 0) {
 			ArrayList<JSONObject> inputtestCases = AdminTestUtil.getInputTestCase(testCaseDTO);
 			ArrayList<JSONObject> outputtestcase = AdminTestUtil.getOutputTestCase(testCaseDTO);
 			for (int i = 0; i < languageList.size(); i++) {
-				response = postWithBodyAndCookie(ApplnURI + testCaseDTO.getEndPoint(),
+				response = deleteWithBodyAndCookie(ApplnURI + testCaseDTO.getEndPoint(),
 						getJsonFromTemplate(inputtestCases.get(i).toString(), testCaseDTO.getInputTemplate()),
 						COOKIENAME, testCaseDTO.getRole(), testCaseDTO.getTestCaseName());
 
@@ -110,32 +91,25 @@ public class SimplePost extends AdminTestUtil implements ITest {
 		}
 
 		else {
-			response = postWithBodyAndCookie(ApplnURI + testCaseDTO.getEndPoint(), inputJson, auditLogCheck, COOKIENAME,
-					testCaseDTO.getRole(), testCaseDTO.getTestCaseName());
-
+			
+				response = deleteWithBodyAndCookie(ApplnURI + testCaseDTO.getEndPoint(), inputJson, COOKIENAME,
+						testCaseDTO.getRole(), testCaseDTO.getTestCaseName());
+			}
 			Map<String, List<OutputValidationDto>> ouputValid = null;
-
-			ouputValid = OutputValidationUtil.doJsonOutputValidation(response.asString(),
-					getJsonFromTemplate(testCaseDTO.getOutput(), testCaseDTO.getOutputTemplate()), testCaseDTO,
-					response.getStatusCode());
+			
+				ouputValid = OutputValidationUtil.doJsonOutputValidation(response.asString(),
+						getJsonFromTemplate(testCaseDTO.getOutput(), testCaseDTO.getOutputTemplate()), testCaseDTO,
+						response.getStatusCode());
+			
 
 			Reporter.log(ReportUtil.getOutputValidationReport(ouputValid));
 
-			if (!OutputValidationUtil.publishOutputResult(ouputValid)) {
-				if (response.asString().contains("IDA-OTA-001"))
-					throw new AdminTestException(
-							"Exceeded number of OTP requests in a given time, Increase otp.request.flooding.max-count");
-				else
-					throw new AdminTestException("Failed at otp output validation");
-			}
+			if (!OutputValidationUtil.publishOutputResult(ouputValid))
+				throw new AdminTestException("Failed at output validation");
 		}
-	}
 
-	/**
-	 * The method ser current test name to result
-	 * 
-	 * @param result
-	 */
+	
+
 	@AfterMethod(alwaysRun = true)
 	public void setResultTestName(ITestResult result) {
 		try {
