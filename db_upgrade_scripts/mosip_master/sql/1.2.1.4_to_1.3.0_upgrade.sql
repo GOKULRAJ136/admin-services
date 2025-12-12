@@ -1,3 +1,5 @@
+\c mosip_master
+
 -- Upgrade script for master.app_detail
 SELECT * INTO master.app_detail_bkp FROM master.app_detail;
 DELETE FROM master.app_detail WHERE lang_code !='eng';
@@ -47,14 +49,15 @@ ALTER TABLE  master.BATCH_JOB_EXECUTION_PARAMS ALTER COLUMN STRING_VAL TYPE VARC
 ALTER TABLE  master.BATCH_JOB_EXECUTION_PARAMS RENAME STRING_VAL TO PARAMETER_VALUE;
 ALTER TABLE  master.BATCH_JOB_EXECUTION DROP COLUMN JOB_CONFIGURATION_LOCATION;
 
-CREATE SEQUENCE  master.BATCH_STEP_EXECUTION_SEQ START WITH 0 MINVALUE 0 MAXVALUE 9223372036854775807 NO CYCLE;
-CREATE SEQUENCE  master.BATCH_JOB_EXECUTION_SEQ START WITH 0 MINVALUE 0 MAXVALUE 9223372036854775807 NO CYCLE;
-CREATE SEQUENCE  master.BATCH_JOB_SEQ START WITH 0 MINVALUE 0 MAXVALUE 9223372036854775807 NO CYCLE;
+CREATE SEQUENCE IF NOT EXISTS master.BATCH_STEP_EXECUTION_SEQ START WITH 0 MINVALUE 0 MAXVALUE 9223372036854775807 NO CYCLE;
+CREATE SEQUENCE IF NOT EXISTS master.BATCH_JOB_EXECUTION_SEQ START WITH 0 MINVALUE 0 MAXVALUE 9223372036854775807 NO CYCLE;
+CREATE SEQUENCE IF NOT EXISTS master.BATCH_JOB_SEQ START WITH 0 MINVALUE 0 MAXVALUE 9223372036854775807 NO CYCLE;
 
 
 --------ca_cert_store-upgrade-db script------------
 ALTER TABLE IF EXISTS master.ca_cert_store ADD COLUMN ca_cert_type character varying(25);
 
+-- Below script is required to upgrade from 1.3.0-beta.2 to 1.3.0 --
 -- UPGRADE FOR PERFORMANCE OPTIMIZATION INDEXES
 
 CREATE INDEX idx_ca_cert_store_cr_dtimes ON master.ca_cert_store (cr_dtimes);
@@ -88,4 +91,11 @@ CREATE INDEX IF NOT EXISTS idx_user_detail_regcntr ON master.user_detail(regcntr
 CREATE INDEX IF NOT EXISTS idx_user_detail_regcntr_flags ON master.user_detail(regcntr_id, is_deleted, is_active);
 CREATE INDEX IF NOT EXISTS idx_user_detail_regcntr_change ON master.user_detail(regcntr_id, cr_dtimes, upd_dtimes, del_dtimes);
 
+CREATE INDEX IF NOT EXISTS idx_ca_cert_domain ON master.ca_cert_store USING btree (partner_domain);
+CREATE INDEX IF NOT EXISTS idx_ca_cert_isdeleted ON master.ca_cert_store USING btree (is_deleted);
+CREATE INDEX IF NOT EXISTS idx_mac_master_sign_key_index_active ON master.machine_master USING btree (lower(sign_key_index)) WHERE is_deleted = false AND is_active = true;
+
 ---END UPGRADE FOR PERFORMANCE OPTIMIZATION INDEXES--
+
+ALTER TABLE master.valid_document
+ALTER COLUMN lang_code DROP NOT NULL;

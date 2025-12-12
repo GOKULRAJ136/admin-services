@@ -1,3 +1,5 @@
+\c mosip_master
+
 -- Rollback script for master.app_detail
 ALTER TABLE master.app_detail ALTER COLUMN lang_code SET NOT NULL;
 ALTER TABLE master.app_detail DROP CONSTRAINT pk_appdtl_id;
@@ -50,13 +52,15 @@ ALTER TABLE master.BATCH_JOB_EXECUTION_PARAMS RENAME PARAMETER_VALUE TO STRING_V
 ALTER TABLE master.BATCH_JOB_EXECUTION_PARAMS ALTER COLUMN STRING_VAL TYPE VARCHAR(250);
 ALTER TABLE master.BATCH_JOB_EXECUTION ADD COLUMN JOB_CONFIGURATION_LOCATION VARCHAR(2500);
 
-DROP SEQUENCE master.BATCH_STEP_EXECUTION_SEQ;
-DROP SEQUENCE master.BATCH_JOB_EXECUTION_SEQ;
-DROP SEQUENCE master.BATCH_JOB_SEQ;
+DROP SEQUENCE IF EXISTS master.BATCH_STEP_EXECUTION_SEQ;
+DROP SEQUENCE IF EXISTS master.BATCH_JOB_EXECUTION_SEQ;
+DROP SEQUENCE IF EXISTS master.BATCH_JOB_SEQ;
 
 
 ----------ca_cert_store-rollback- db script-------------
 ALTER TABLE IF EXISTS master.ca_cert_store DROP COLUMN IF EXISTS ca_cert_type;
+
+-- Below scripts are required to rollback from 1.3.0 to 1.3.0-beta.2 --
 
 -- ROLLBACK FOR PERFORMANCE OPTIMIZATION INDEXES
 
@@ -92,5 +96,19 @@ DROP INDEX IF EXISTS master.idx_user_detail_active_id;
 DROP INDEX IF EXISTS master.idx_user_detail_regcntr;
 DROP INDEX IF EXISTS master.idx_user_detail_regcntr_flags;
 DROP INDEX IF EXISTS master.idx_user_detail_regcntr_change;
+DROP INDEX IF EXISTS master.idx_ca_cert_domain;
+DROP INDEX IF EXISTS master.idx_ca_cert_isdeleted;
+DROP INDEX IF EXISTS master.idx_mac_master_sign_key_index_active;
 
 -- END ROLLBACK FOR PERFORMANCE OPTIMIZATION INDEXES
+
+BEGIN;
+
+UPDATE master.valid_document
+SET lang_code = 'eng'
+WHERE lang_code IS NULL;
+
+ALTER TABLE master.valid_document
+  ALTER COLUMN lang_code SET NOT NULL;
+
+COMMIT;
